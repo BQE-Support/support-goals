@@ -173,7 +173,7 @@
     </header>
     <div id="app"><div class="empty">Loading goals...</div></div>
   </div>
-  <div class="foot">BQE Software &middot; Internal &middot; Version 1.0</div>
+  <div class="foot">BQE Software &middot; Internal &middot; Version 1.1</div>
 </div>
 <div id="toast" hidden></div>
 
@@ -254,7 +254,12 @@
       h += "</select>";
     }
     h += '</div><div class="people-row"><span class="lbl">Proposed by</span>' + (g.proposed_by ? who(g.proposed_by) : '<span class="empty">Not recorded</span>');
-    if (!g.proposed_by) h += '<button class="btn link" data-act="setproposer" data-g="' + esc(g.id) + '">That was me</button>';
+    if (canDelete()) {
+      h += '<select data-act="setproposerto" data-g="' + esc(g.id) + '" aria-label="Change who proposed this goal"><option value="">Change proposer</option>';
+      S.people.forEach(function (p) { if (p.id !== g.proposed_by) h += '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; });
+      if (g.proposed_by) h += '<option value="__none">Not recorded</option>';
+      h += "</select>";
+    } else if (!g.proposed_by) h += '<button class="btn link" data-act="setproposer" data-g="' + esc(g.id) + '">That was me</button>';
     h += "</div></div>";
     // subtasks
     h += '<div class="col"><h3>Subtasks</h3>';
@@ -336,7 +341,7 @@
   app.addEventListener("click", function (e) {
     var t = e.target.closest("[data-act]"); if (!t) return;
     var a = t.dataset.act, g = t.dataset.g, id = t.dataset.id;
-    if (a === "status" || a === "tick" || a === "addowner") return; // handled on change
+    if (a === "status" || a === "tick" || a === "addowner" || a === "setproposerto") return; // handled on change
     if (a === "toggle") { if (e.target.closest("select,button.x,input")) return; S.open[g] = S.open[g] === false; render(); return; }
     if (a === "togglenewgoal") { S.addGoal = !S.addGoal; render(); return; }
     if (a === "editgoal") { S.editing = g; render(); return; }
@@ -366,6 +371,7 @@
       act({ action: "task_toggle", id: t.dataset.id, done: t.checked });
     }
     if (a === "status") act({ action: "goal_update", id: t.dataset.g, status: t.value });
+    if (a === "setproposerto" && t.value) act({ action: "goal_update", id: t.dataset.g, proposed_by: t.value === "__none" ? null : t.value }, "Proposer changed");
     if (a === "addowner" && t.value) {
       var go = S.goals.filter(function (x) { return x.id === t.dataset.g; })[0]; if (!go) return;
       act({ action: "goal_update", id: t.dataset.g, owners: (go.owners || []).concat([t.value]) });
