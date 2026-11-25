@@ -64,12 +64,23 @@
   .kpi .l { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
   .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .sec-note { color: var(--ink-2); font-size: 13px; margin: 2px 0 0; }
-  .tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-  .tab { font: inherit; font-size: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 6px 16px; cursor: pointer; }
-  .tab:hover { border-color: var(--accent); }
-  .tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .tab .cnt { opacity: .8; font-variant-numeric: tabular-nums; margin-left: 4px; }
-  .arr { color: var(--ink-3); }
+  .flow { display: flex; align-items: stretch; justify-content: center; gap: 10px; max-width: 860px; width: 100%; margin: 0 auto; }
+  .step { --tone: var(--accent); --tone-soft: var(--accent-soft); flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; font: inherit; color: var(--ink); background: var(--tone-soft); border: 2px solid transparent; border-radius: 16px; box-shadow: var(--shadow); padding: 22px 16px; cursor: pointer; }
+  .step.ideas { --tone: var(--warning); --tone-soft: var(--warning-soft); }
+  .step.goals { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+  .step.rocks { --tone: var(--good); --tone-soft: var(--good-soft); }
+  .step:hover { border-color: var(--tone); }
+  .step.on { border-color: var(--tone); box-shadow: 0 0 0 3px var(--tone-soft), var(--shadow); }
+  .step .v { font-family: var(--serif); font-size: 56px; line-height: 1; color: var(--tone); font-variant-numeric: tabular-nums; }
+  .step .l { font-size: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .step .l svg { color: var(--tone); }
+  .step .s { font-size: 13px; color: var(--ink-2); }
+  .arrow { display: flex; align-items: center; color: var(--ink-3); flex: none; }
+  .goal.rock { border-color: var(--good); }
+  .goal.rock .fill { background: var(--good); }
+  .goal.rock .sub { color: var(--good); }
+  .analysis .an-body { margin-top: 10px; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 75ch; color: var(--ink); }
+  @media (max-width: 560px) { .flow { flex-direction: column; } .arrow { justify-content: center; transform: rotate(90deg); height: 20px; } }
   .stack { display: flex; flex-direction: column; gap: 14px; }
   .goal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
   .goal-top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 14px 16px; cursor: pointer; }
@@ -179,7 +190,7 @@
     </header>
     <div id="app"><div class="empty">Loading goals...</div></div>
   </div>
-  <div class="foot">BQE Software &middot; Internal &middot; Version 1.2</div>
+  <div class="foot">BQE Software &middot; Internal &middot; Version 1.3</div>
 </div>
 <div id="toast" hidden></div>
 
@@ -188,7 +199,7 @@
   var BOARD_FN = "support-goals";
   var REFRESH_MS = 15 * 60 * 1000, STALE_MS = 5 * 60 * 1000;
   var TABS = ["ideas", "goals", "rocks"];
-  var S = { tab: (TABS.indexOf((location.hash || "").slice(1)) >= 0 ? (location.hash || "").slice(1) : "goals"), goals: [], tasks: [], log: [], ideas: [], people: [], viewer: null, open: {}, allLogs: {}, confirm: null, editing: null, addGoal: false, ready: false, err: "" };
+  var S = { analysis: null, anOpen: true, analyzing: false, tab: (TABS.indexOf((location.hash || "").slice(1)) >= 0 ? (location.hash || "").slice(1) : "goals"), goals: [], tasks: [], log: [], ideas: [], people: [], viewer: null, open: {}, allLogs: {}, confirm: null, editing: null, addGoal: false, ready: false, err: "" };
   var STATUS = [["todo", "Not started", "s-todo"], ["doing", "In progress", "s-doing"], ["risk", "At risk", "s-risk"], ["done", "Done", "s-done"]];
   var app = document.getElementById("app"), loadedAt = 0, sig = "", refreshTimer = null, started = false;
 
@@ -215,9 +226,12 @@
   function canDelete() { return !!S.viewer && (S.viewer.role === "admin" || S.viewer.role === "manager"); }
 
   // ---- saving: every change is one call, and the board redraws from the answer ----
+  function fmtStamp(s) {
+    try { return new Date(s).toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " PT"; } catch (e) { return ""; }
+  }
   function setData(j) {
-    var next = JSON.stringify([j.goals, j.tasks, j.log, j.ideas, j.people]);
-    S.viewer = j.viewer || S.viewer; S.people = j.people || [];
+    var next = JSON.stringify([j.goals, j.tasks, j.log, j.ideas, j.people, j.analysis]);
+    S.viewer = j.viewer || S.viewer; S.people = j.people || []; S.analysis = j.analysis || null;
     if (next !== sig) { sig = next; S.goals = j.goals || []; S.tasks = j.tasks || []; S.log = j.log || []; S.ideas = j.ideas || []; S.ready = true; render(); }
     else if (!S.ready) { S.ready = true; render(); }
   }
@@ -239,12 +253,12 @@
     var done = ts.filter(function (t) { return t.done; }).length, pct = ts.length ? Math.round(done / ts.length * 100) : 0;
     var logs = S.log.filter(function (l) { return l.goal_id === g.id; }).sort(byLog);
     var open = isOpen(g), st = statusInfo(g.status), owners = Array.isArray(g.owners) ? g.owners : [];
-    var h = '<article class="goal' + (open ? " open" : "") + '" data-g="' + esc(g.id) + '">';
+    var h = '<article class="goal' + (open ? " open" : "") + (g.status === "done" ? " rock" : "") + '" data-g="' + esc(g.id) + '">';
     h += '<div class="goal-top" data-act="toggle" data-g="' + esc(g.id) + '"><button class="chev" aria-label="Show or hide details" aria-expanded="' + open + '">&#9656;</button>';
     h += '<div class="goal-title">' + esc(g.title) + '<div class="sub">' + (g.status === "done" && g.done_at ? "Completed " + fmtDate(g.done_at) + " &middot; " : "") + (owners.length ? "Owner: " + owners.map(who).join(", ") : "No owner yet") + "</div></div><div class=\"goal-meta\">";
     h += '<select class="chip status ' + st[2] + '" data-act="status" data-g="' + esc(g.id) + '" aria-label="Status">';
     STATUS.forEach(function (s) { h += '<option value="' + s[0] + '"' + (s[0] === st[0] ? " selected" : "") + ">" + s[1] + "</option>"; });
-    h += '</select><div class="prog"><div class="track"><div class="fill" style="width:' + pct + '%"></div></div><span class="n">' + done + " of " + ts.length + "</span></div></div></div>";
+    h += '</select><div class="prog"><div class="track"><div class="fill" style="width:' + pct + '%"></div></div><span class="n">' + (ts.length ? pct + "% &middot; " + done + " of " + ts.length : "No subtasks") + "</span></div></div></div>";
     if (!open) return h + "</article>";
     h += '<div class="goal-body">';
     if (S.editing === g.id) {
@@ -304,15 +318,26 @@
     var rocks = all.filter(function (g) { return g.status === "done"; }).sort(function (a, b) { return String(b.done_at || "").localeCompare(String(a.done_at || "")); });
     var doneT = S.tasks.filter(function (t) { return t.done; }).length, ym = today().slice(0, 7);
     var month = S.log.filter(function (l) { return String(l.day || "").indexOf(ym) === 0; }).length;
-    var h = '<div class="kpis"><div class="kpi"><div class="v">' + goals.length + '</div><div class="l">Active goals</div></div>' +
-      '<div class="kpi"><div class="v">' + rocks.length + '</div><div class="l">Rocks (goals done)</div></div>' +
-      '<div class="kpi"><div class="v">' + doneT + " of " + S.tasks.length + '</div><div class="l">Subtasks done</div></div>' +
-      '<div class="kpi"><div class="v">' + month + '</div><div class="l">Work entries this month</div></div>' +
-      '<div class="kpi"><div class="v">' + S.ideas.length + '</div><div class="l">Ideas waiting</div></div></div>';
-    h += '<div class="tabs" role="tablist" aria-label="Board sections">' +
-      '<button class="tab' + (S.tab === "ideas" ? " on" : "") + '" role="tab" aria-selected="' + (S.tab === "ideas") + '" data-act="tab" data-tab="ideas">Ideas <span class="cnt">' + S.ideas.length + '</span></button><span class="arr" aria-hidden="true">&rsaquo;</span>' +
-      '<button class="tab' + (S.tab === "goals" ? " on" : "") + '" role="tab" aria-selected="' + (S.tab === "goals") + '" data-act="tab" data-tab="goals">Goals <span class="cnt">' + goals.length + '</span></button><span class="arr" aria-hidden="true">&rsaquo;</span>' +
-      '<button class="tab' + (S.tab === "rocks" ? " on" : "") + '" role="tab" aria-selected="' + (S.tab === "rocks") + '" data-act="tab" data-tab="rocks">Rocks <span class="cnt">' + rocks.length + '</span></button></div>';
+    var arrow = '<span class="arrow" aria-hidden="true"><svg viewBox="0 0 40 16" width="40" height="16"><path d="M2 8h32M28 2l8 6-8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+    var check = '<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M5.5 10.5l3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    function step(tab, n, name, note) {
+      return '<button class="step ' + tab + (S.tab === tab ? " on" : "") + '" role="tab" aria-selected="' + (S.tab === tab) + '" data-act="tab" data-tab="' + tab + '">' +
+        '<span class="v">' + n + '</span><span class="l">' + (tab === "rocks" ? check : "") + name + '</span><span class="s">' + note + "</span></button>";
+    }
+    var tpct = S.tasks.length ? Math.round(doneT / S.tasks.length * 100) : 0, atRisk = goals.filter(function (g) { return g.status === "risk"; }).length;
+    var h = '<div class="flow" role="tablist" aria-label="Ideas flow into goals, and done goals become rocks">' +
+      step("ideas", S.ideas.length, "Ideas", "waiting to be picked up") + arrow +
+      step("goals", goals.length, "Goals", atRisk ? atRisk + " at risk" : "in progress") + arrow +
+      step("rocks", rocks.length, "Rocks", "completed goals") + "</div>";
+    h += '<div class="kpis"><div class="kpi"><div class="v">' + tpct + '%</div><div class="l">Of all subtasks done (' + doneT + " of " + S.tasks.length + ')</div></div>' +
+      '<div class="kpi"><div class="v">' + month + '</div><div class="l">Work entries this month</div></div></div>';
+    // weekly AI analysis, written every Monday
+    var an = S.analysis;
+    h += '<section class="panel analysis"><div class="sec-head"><div><h2>Weekly analysis</h2><p class="sec-note">' +
+      (an ? "Written " + fmtStamp(an.created_at) + (an.trigger === "manual" && an.by_name ? ", refreshed by " + esc(an.by_name) : "") + ". Refreshes every Monday morning." : "The first analysis is written Monday morning.") + "</p></div><div>" +
+      (canDelete() ? '<button class="btn" data-act="runanalysis"' + (S.analyzing ? " disabled" : "") + ">" + (S.analyzing ? "Writing..." : "Refresh now") + "</button> " : "") +
+      (an ? '<button class="btn link" data-act="toggleanalysis">' + (S.anOpen ? "Hide" : "Show") + "</button>" : "") + "</div></div>" +
+      (an && S.anOpen ? '<div class="an-body">' + esc(an.body) + "</div>" : "") + "</section>";
     if (S.tab === "goals") {
     h += '<section class="stack"><div class="sec-head"><div><h2>Goals</h2><p class="sec-note">Open a goal to tick off subtasks and log work. Mark a goal Done and it moves to Rocks.</p></div>' +
          '<button class="btn primary" data-act="togglenewgoal">' + (S.addGoal ? "Close" : "Add a goal") + "</button></div>";
@@ -369,6 +394,13 @@
     var t = e.target.closest("[data-act]"); if (!t) return;
     var a = t.dataset.act, g = t.dataset.g, id = t.dataset.id;
     if (a === "status" || a === "tick" || a === "addowner" || a === "setproposerto") return; // handled on change
+    if (a === "toggleanalysis") { S.anOpen = !S.anOpen; render(); return; }
+    if (a === "runanalysis") {
+      S.analyzing = true; render();
+      BQEBoard.api(BOARD_FN, { method: "POST", body: { action: "analysis_run" } }).then(function (j) { loadedAt = Date.now(); S.analyzing = false; sig = ""; setData(j); toast("Analysis refreshed"); })
+        .catch(function (e) { S.analyzing = false; render(); toast(e.message); });
+      return;
+    }
     if (a === "tab") { S.tab = t.dataset.tab; try { history.replaceState(null, "", "#" + S.tab); } catch (x) {} render(); return; }
     if (a === "toggle") {
       if (e.target.closest("select,button.x,input")) return;
