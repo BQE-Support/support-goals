@@ -195,7 +195,7 @@
     </header>
     <div id="app"><div class="empty">Loading goals...</div></div>
   </div>
-  <div class="foot">BQE Software &middot; Internal &middot; Version 1.4</div>
+  <div class="foot">BQE Software &middot; Internal &middot; Version 1.5</div>
 </div>
 <div id="toast" hidden></div>
 
@@ -204,7 +204,7 @@
   var BOARD_FN = "support-goals";
   var REFRESH_MS = 15 * 60 * 1000, STALE_MS = 5 * 60 * 1000;
   var TABS = ["ideas", "goals", "rocks"];
-  var S = { analysis: null, anOpen: true, analyzing: false, tab: (TABS.indexOf((location.hash || "").slice(1)) >= 0 ? (location.hash || "").slice(1) : "home"), goals: [], tasks: [], log: [], ideas: [], people: [], viewer: null, open: {}, allLogs: {}, confirm: null, editing: null, addGoal: false, ready: false, err: "" };
+  var S = { showLater: false, showRej: false, analysis: null, anOpen: true, analyzing: false, tab: (TABS.indexOf((location.hash || "").slice(1)) >= 0 ? (location.hash || "").slice(1) : "home"), goals: [], tasks: [], log: [], ideas: [], people: [], viewer: null, open: {}, allLogs: {}, confirm: null, editing: null, addGoal: false, ready: false, err: "" };
   var STATUS = [["todo", "Not started", "s-todo"], ["doing", "In progress", "s-doing"], ["risk", "At risk", "s-risk"], ["done", "Done", "s-done"]];
   var app = document.getElementById("app"), loadedAt = 0, sig = "", refreshTimer = null, started = false;
 
@@ -231,6 +231,12 @@
   function canDelete() { return !!S.viewer && (S.viewer.role === "admin" || S.viewer.role === "manager"); }
 
   // ---- saving: every change is one call, and the board redraws from the answer ----
+  // An idea is "open" unless it was rejected or is postponed to a later date (it returns on its own after that date).
+  function ideaState(i) {
+    if (i.status === "rejected") return "rejected";
+    if (i.postponed_until && Date.parse(i.postponed_until) > Date.now()) return "postponed";
+    return "open";
+  }
   function fmtStamp(s) {
     try { return new Date(s).toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " PT"; } catch (e) { return ""; }
   }
@@ -338,7 +344,7 @@
     }
     var tpct = S.tasks.length ? Math.round(doneT / S.tasks.length * 100) : 0, atRisk = goals.filter(function (g) { return g.status === "risk"; }).length;
     var h = '<div class="flow" role="tablist" aria-label="Ideas flow into goals, and done goals become rocks">' +
-      step("ideas", S.ideas.length, "Ideas", "waiting to be picked up") + arrow +
+      step("ideas", S.ideas.filter(function (i) { return ideaState(i) === "open"; }).length, "Ideas", "waiting to be picked up") + arrow +
       step("goals", goals.length, "Goals", atRisk ? atRisk + " at risk" : "in progress") + arrow +
       step("rocks", rocks.length, "Rocks", "completed goals") + "</div>";
     h += '<div class="kpis"><div class="kpi"><div class="v">' + tpct + '%</div><div class="l">Of all subtasks done (' + doneT + " of " + S.tasks.length + ')</div></div>' +
@@ -376,13 +382,42 @@
     h += '<form class="f" data-form="idea"><textarea id="idea-text" placeholder="An idea for 2027" aria-label="Idea" required maxlength="2000"></textarea><select id="idea-goal" aria-label="Related goal"><option value="">Not tied to a goal</option>';
     goals.forEach(function (g) { h += '<option value="' + esc(g.id) + '">' + esc(g.title) + "</option>"; });
     h += '</select><button class="btn primary" type="submit">Add idea</button></form>';
-    if (!S.ideas.length) h += '<div class="empty">No ideas yet.</div>';
-    S.ideas.slice().sort(byTime).reverse().forEach(function (i) {
+    var openI = S.ideas.filter(function (i) { return ideaState(i) === "open"; }).sort(byTime).reverse();
+    var laterI = S.ideas.filter(function (i) { return ideaState(i) === "postponed"; }).sort(function (a, b) { return String(a.postponed_until).localeCompare(String(b.postponed_until)); });
+    var rejI = S.ideas.filter(function (i) { return ideaState(i) === "rejected"; }).sort(function (a, b) { return String(b.decided_at || "").localeCompare(String(a.decided_at || "")); });
+    function ideaBy(i) {
       var g = S.goals.filter(function (x) { return x.id === i.goal_id; })[0];
-      h += '<div class="idea"><div class="tx">' + esc(i.text) + '<div class="by">' + (i.source === "claude" ? '<span class="suggest">Suggested by Claude</span>' : "Proposed by " + who(i.by_agent)) + (g ? " &middot; for " + esc(g.title) : "") + "</div></div>" +
+      return '<div class="by">' + (i.source === "claude" ? '<span class="suggest">Suggested by Claude</span>' : "Proposed by " + who(i.by_agent)) + (g ? " &middot; for " + esc(g.title) : "") + "</div>";
+    }
+    if (!openI.length) h += '<div class="empty">No ideas waiting.</div>';
+    openI.forEach(function (i) {
+      var g = S.goals.filter(function (x) { return x.id === i.goal_id; })[0];
+      h += '<div class="idea"><div class="tx">' + esc(i.text) + ideaBy(i) + "</div>" +
            '<div class="acts">' + (g ? '<button class="btn" data-act="idea2task" data-id="' + esc(i.id) + '">Add as subtask</button>' : "") +
-           '<button class="btn" data-act="idea2goal" data-id="' + esc(i.id) + '">Make it a goal</button><button class="btn" data-act="delidea" data-id="' + esc(i.id) + '">Remove</button></div></div>';
+           '<button class="btn" data-act="idea2goal" data-id="' + esc(i.id) + '">Make it a goal</button>' +
+           '<button class="btn" data-act="postponeidea" data-id="' + esc(i.id) + '">Postpone</button>' +
+           '<button class="btn danger" data-act="rejectidea" data-id="' + esc(i.id) + '">Reject</button></div></div>';
     });
+    h += "</div></section>";
+    h += '<section class="stack"><div class="panel"><div class="sec-head"><div><h2>Postponed</h2><p class="sec-note">Put off for a month. They come back to Ideas on the date shown.</p></div>' +
+         '<button class="btn link" data-act="toggleideas" data-which="later">' + (S.showLater ? "Hide" : "Show " + laterI.length) + "</button></div>";
+    if (S.showLater) {
+      if (!laterI.length) h += '<div class="empty">Nothing postponed.</div>';
+      laterI.forEach(function (i) {
+        h += '<div class="idea"><div class="tx">' + esc(i.text) + ideaBy(i) + '<div class="by">Returns ' + fmtDate(i.postponed_until) + (i.decided_by ? " &middot; postponed by " + who(i.decided_by) : "") + "</div></div>" +
+             '<div class="acts"><button class="btn" data-act="restoreidea" data-id="' + esc(i.id) + '">Bring back now</button></div></div>';
+      });
+    }
+    h += "</div></section>";
+    h += '<section class="stack"><div class="panel"><div class="sec-head"><div><h2>Rejected</h2><p class="sec-note">Ideas the team decided against. Restore one if you change your mind.</p></div>' +
+         '<button class="btn link" data-act="toggleideas" data-which="rej">' + (S.showRej ? "Hide" : "Show " + rejI.length) + "</button></div>";
+    if (S.showRej) {
+      if (!rejI.length) h += '<div class="empty">Nothing rejected.</div>';
+      rejI.forEach(function (i) {
+        h += '<div class="idea"><div class="tx">' + esc(i.text) + ideaBy(i) + '<div class="by">Rejected' + (i.decided_by ? " by " + who(i.decided_by) : "") + (i.decided_at ? " on " + fmtDate(i.decided_at) : "") + "</div></div>" +
+             '<div class="acts"><button class="btn" data-act="restoreidea" data-id="' + esc(i.id) + '">Restore</button></div></div>';
+      });
+    }
     h += "</div></section>";
     }
     if (S.tab === "rocks") {
@@ -438,7 +473,10 @@
     if (a === "setproposer") { act({ action: "goal_update", id: g, proposed_by: S.viewer && S.viewer.agentId }); return; }
     if (a === "deltask") act({ action: "task_delete", id: id });
     if (a === "dellog") act({ action: "log_delete", id: id });
-    if (a === "delidea") act({ action: "idea_delete", id: id });
+    if (a === "toggleideas") { if (t.dataset.which === "later") S.showLater = !S.showLater; else S.showRej = !S.showRej; render(); return; }
+    if (a === "rejectidea") act({ action: "idea_reject", id: id }, "Idea rejected. It is in the Rejected list.");
+    if (a === "postponeidea") act({ action: "idea_postpone", id: id }, "Postponed for a month");
+    if (a === "restoreidea") act({ action: "idea_restore", id: id }, "Back in Ideas");
     if (a === "idea2goal") act({ action: "idea_promote", id: id, as: "goal" }, "Idea is now a goal. See the Goals tab.");
     if (a === "idea2task") act({ action: "idea_promote", id: id, as: "task" }, "Idea is now a subtask");
   });
