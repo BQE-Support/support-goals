@@ -69,7 +69,12 @@
   .step.ideas { --tone: var(--warning); --tone-soft: var(--warning-soft); }
   .step.goals { --tone: var(--accent); --tone-soft: var(--accent-soft); }
   .step.rocks { --tone: var(--good); --tone-soft: var(--good-soft); }
+  .step { text-decoration: none; }
   .step:hover { border-color: var(--tone); }
+  .pagenav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .navgap { flex: 1 1 0; }
+  .navlink { font-size: 13px; text-decoration: none; color: var(--accent); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; }
+  .navlink:hover { border-color: var(--accent); }
   .step.on { border-color: var(--tone); box-shadow: 0 0 0 3px var(--tone-soft), var(--shadow); }
   .step .v { font-family: var(--serif); font-size: 56px; line-height: 1; color: var(--tone); font-variant-numeric: tabular-nums; }
   .step .l { font-size: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
@@ -185,12 +190,12 @@
     <header>
       <div class="eyebrow">BQE Support</div>
       <h1>Support Goals 2027</h1>
-      <p class="scope">Shared board for the Support leads. Add ideas as they come up, break each goal into subtasks with checkboxes, and log the work as it happens.</p>
+      <p class="scope" id="scope">Shared board for the Support leads. Add ideas as they come up, break each goal into subtasks with checkboxes, and log the work as it happens.</p>
       <span class="tag" id="tag">Loading the board</span>
     </header>
     <div id="app"><div class="empty">Loading goals...</div></div>
   </div>
-  <div class="foot">BQE Software &middot; Internal &middot; Version 1.3.1</div>
+  <div class="foot">BQE Software &middot; Internal &middot; Version 1.4</div>
 </div>
 <div id="toast" hidden></div>
 
@@ -199,7 +204,7 @@
   var BOARD_FN = "support-goals";
   var REFRESH_MS = 15 * 60 * 1000, STALE_MS = 5 * 60 * 1000;
   var TABS = ["ideas", "goals", "rocks"];
-  var S = { analysis: null, anOpen: true, analyzing: false, tab: (TABS.indexOf((location.hash || "").slice(1)) >= 0 ? (location.hash || "").slice(1) : "goals"), goals: [], tasks: [], log: [], ideas: [], people: [], viewer: null, open: {}, allLogs: {}, confirm: null, editing: null, addGoal: false, ready: false, err: "" };
+  var S = { analysis: null, anOpen: true, analyzing: false, tab: (TABS.indexOf((location.hash || "").slice(1)) >= 0 ? (location.hash || "").slice(1) : "home"), goals: [], tasks: [], log: [], ideas: [], people: [], viewer: null, open: {}, allLogs: {}, confirm: null, editing: null, addGoal: false, ready: false, err: "" };
   var STATUS = [["todo", "Not started", "s-todo"], ["doing", "In progress", "s-doing"], ["risk", "At risk", "s-risk"], ["done", "Done", "s-done"]];
   var app = document.getElementById("app"), loadedAt = 0, sig = "", refreshTimer = null, started = false;
 
@@ -321,8 +326,15 @@
     var arrow = '<span class="arrow" aria-hidden="true"><svg viewBox="0 0 40 16" width="40" height="16"><path d="M2 8h32M28 2l8 6-8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
     var check = '<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="M5.5 10.5l3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     function step(tab, n, name, note) {
-      return '<button class="step ' + tab + (S.tab === tab ? " on" : "") + '" role="tab" aria-selected="' + (S.tab === tab) + '" data-act="tab" data-tab="' + tab + '">' +
-        '<span class="v">' + n + '</span><span class="l">' + name + '</span><span class="s">' + note + "</span></button>";
+      return '<a class="step ' + tab + '" href="#' + tab + '">' +
+        '<span class="v">' + n + '</span><span class="l">' + name + '</span><span class="s">' + note + "</span></a>";
+    }
+    function pageNav() {
+      var order = ["ideas", "goals", "rocks"], names = { ideas: "Ideas", goals: "Goals", rocks: "Rocks" }, i = order.indexOf(S.tab);
+      var prev = i > 0 ? order[i - 1] : null, next = i >= 0 && i < order.length - 1 ? order[i + 1] : null;
+      return '<nav class="pagenav" aria-label="Page navigation"><a class="navlink" href="#home">&lsaquo; Home</a><span class="navgap"></span>' +
+        (prev ? '<a class="navlink" href="#' + prev + '">&lsaquo; Previous step: ' + names[prev] + "</a>" : "") +
+        (next ? '<a class="navlink" href="#' + next + '">Next step: ' + names[next] + " &rsaquo;</a>" : "") + "</nav>";
     }
     var tpct = S.tasks.length ? Math.round(doneT / S.tasks.length * 100) : 0, atRisk = goals.filter(function (g) { return g.status === "risk"; }).length;
     var h = '<div class="flow" role="tablist" aria-label="Ideas flow into goals, and done goals become rocks">' +
@@ -338,6 +350,9 @@
       (canDelete() ? '<button class="btn" data-act="runanalysis"' + (S.analyzing ? " disabled" : "") + ">" + (S.analyzing ? "Writing..." : "Refresh now") + "</button> " : "") +
       (an ? '<button class="btn link" data-act="toggleanalysis">' + (S.anOpen ? "Hide" : "Show") + "</button>" : "") + "</div></div>" +
       (an && S.anOpen ? '<div class="an-body">' + esc(an.body) + "</div>" : "") + "</section>";
+    // Home shows only the flow tiles, the two totals and the weekly analysis. Ideas, Goals and Rocks are their own pages.
+    if (S.tab === "home") return h;
+    h = pageNav();
     if (S.tab === "goals") {
     h += '<section class="stack"><div class="sec-head"><div><h2>Goals</h2><p class="sec-note">Open a goal to tick off subtasks and log work. Mark a goal Done and it moves to Rocks.</p></div>' +
          '<button class="btn primary" data-act="togglenewgoal">' + (S.addGoal ? "Close" : "Add a goal") + "</button></div>";
@@ -376,7 +391,7 @@
       rocks.forEach(function (g) { h += goalHtml(g); });
       h += "</section>";
     }
-    return h;
+    return h + pageNav();
   }
 
   function render() {
@@ -387,6 +402,7 @@
     Object.keys(saved).forEach(function (id) { var e = $(id); if (e && saved[id] !== "") e.value = saved[id]; });
     if (aid) { var f = $(aid); if (f) { f.focus(); try { if (ss != null) f.setSelectionRange(ss, se); } catch (x) {} } }
     $("tag").textContent = "Shared by the team. Saves as you go.";
+    $("scope").hidden = $("tag").hidden = S.tab !== "home";
   }
 
   // ---- events ----
@@ -488,6 +504,11 @@
       .catch(function (x) { showSignin(x.message); }).finally(function () { $("setPwBtn").disabled = false; $("newPw").value = $("newPw2").value = ""; });
   });
   $("signOutBtn").addEventListener("click", function () { BQEBoard.signOut(); });
+  window.addEventListener("hashchange", function () {
+    var t = (location.hash || "").slice(1);
+    S.tab = TABS.indexOf(t) >= 0 ? t : "home";
+    render(); window.scrollTo(0, 0);
+  });
   document.addEventListener("visibilitychange", function () { if (!document.hidden && started && Date.now() - loadedAt > STALE_MS) load(); });
 
   BQEBoard.start({
