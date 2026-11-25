@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Support Goals 2027</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233454D1'/%3E%3Cpath d='M8 9h7v6H8zM17 9h7v6h-7zM8 17h7v6H8zM17 17h7v6h-7z' fill='white'/%3E%3C/svg%3E">
+<script src="bqe-board.js"></script>
+<style>
+  :root {
+    --bg: #F5F6F9; --surface: #FFFFFF; --surface-alt: #ECEFF5; --border: #DDE1EA;
+    --ink: #16213E; --ink-2: #47517A; --ink-3: #6B7396;
+    --accent: #3454D1; --accent-soft: #E7EBFB;
+    --good: #1E8A5F; --good-soft: #E4F5EC; --warning: #B8801E; --warning-soft: #FBF1DE;
+    --critical: #C23B3B; --critical-soft: #FBE7E4;
+    --shadow: 0 1px 2px rgba(22,33,62,0.06), 0 6px 16px rgba(22,33,62,0.06);
+    --serif: Georgia, "Iowan Old Style", "Source Serif 4", "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0C1220; --surface: #131A2B; --surface-alt: #1B2438; --border: #29334A;
+      --ink: #E9ECF6; --ink-2: #B0B7D1; --ink-3: #8F99B6; --accent: #7C93F5; --accent-soft: #1E2748;
+      --good: #4FC090; --good-soft: #123024; --warning: #E3AC49; --warning-soft: #34240A;
+      --critical: #E2685A; --critical-soft: #38201B;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 20px rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0C1220; --surface: #131A2B; --surface-alt: #1B2438; --border: #29334A;
+    --ink: #E9ECF6; --ink-2: #B0B7D1; --ink-3: #8F99B6; --accent: #7C93F5; --accent-soft: #1E2748;
+    --good: #4FC090; --good-soft: #123024; --warning: #E3AC49; --warning-soft: #34240A;
+    --critical: #E2685A; --critical-soft: #38201B;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 20px rgba(0,0,0,0.3);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 22px; }
+  .topbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); }
+  .top-btn { border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .top-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .viewers { display: inline-flex; gap: 4px; }
+  .viewer-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--surface-alt); color: var(--ink-2); font-size: 10.5px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); }
+  .viewer-dot.me { background: var(--accent-soft); color: var(--accent); }
+  .eyebrow { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: 34px; line-height: 1.15; margin: 4px 0 6px; text-wrap: balance; }
+  h2 { font-family: var(--serif); font-weight: 600; font-size: 22px; margin: 0; }
+  .scope { color: var(--ink-2); max-width: 65ch; margin: 0 0 10px; }
+  .tag { display: inline-block; font-size: 12px; color: var(--ink-2); background: var(--surface-alt); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; }
+  .signin { max-width: 440px; margin: 12vh auto 0; text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+  .signin p { color: var(--ink-2); margin: 0; }
+  .signin .msg { color: var(--critical); font-size: 13px; }
+  .signin .note { color: var(--good); font-size: 13px; }
+  .signin form { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 320px; }
+  .signin input { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 9px 11px; font: 14px var(--sans); }
+  .signin a { color: var(--accent); }
+  .tiny { font-size: 12.5px; }
+  .primary-btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 10px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); min-width: 0; }
+  .kpi .v { font-family: var(--serif); font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .kpi .l { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+  .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .sec-note { color: var(--ink-2); font-size: 13px; margin: 2px 0 0; }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+  .goal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
+  .goal-top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 14px 16px; cursor: pointer; }
+  .chev { width: 22px; height: 22px; border: 0; background: transparent; color: var(--ink-3); cursor: pointer; font-size: 14px; transition: transform .15s; padding: 0; }
+  .goal.open .chev { transform: rotate(90deg); }
+  .goal-title { font-family: var(--serif); font-size: 19px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .sub { font-size: 12px; color: var(--ink-2); font-weight: 400; font-family: var(--sans); margin-top: 2px; }
+  .goal-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+  .prog { display: flex; align-items: center; gap: 8px; min-width: 130px; }
+  .track { flex: 1; height: 8px; background: var(--surface-alt); border-radius: 999px; overflow: hidden; min-width: 60px; }
+  .fill { height: 100%; background: var(--accent); border-radius: 999px; }
+  .prog .n { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .goal-body { border-top: 1px solid var(--border); padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .col { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+  .col h3 { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin: 0; font-weight: 600; }
+  .why { grid-column: 1 / -1; color: var(--ink-2); max-width: 75ch; margin: 0; }
+  .goal-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .people { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+  .people-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .people-row .lbl { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); min-width: 92px; }
+  .pchip { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 13px; }
+  .pchip .x { padding: 0 6px; color: var(--accent); }
+  .task { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+  .task input[type=checkbox] { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
+  .task .tx { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .task.done .tx { color: var(--ink-3); text-decoration: line-through; }
+  .x { border: 0; background: transparent; color: var(--ink-3); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+  .x:hover { color: var(--critical); background: var(--critical-soft); }
+  .entry { padding: 8px 0; border-bottom: 1px dashed var(--border); }
+  .entry .when { font-size: 12px; color: var(--ink-3); }
+  .entry .tx { overflow-wrap: anywhere; white-space: pre-wrap; }
+  .empty { color: var(--ink-3); font-size: 13px; padding: 6px 0; }
+  form.f { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; margin: 0; }
+  input[type=text], input[type=date], textarea, select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+  input[type=text] { flex: 1 1 180px; }
+  textarea { flex: 1 1 100%; min-height: 62px; resize: vertical; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn { font: inherit; font-size: 13px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.danger { color: var(--critical); }
+  .btn.danger.sure { background: var(--critical); border-color: var(--critical); color: #fff; }
+  .btn.link { border: 0; background: transparent; color: var(--accent); padding: 4px 6px; }
+  .chip { display: inline-block; font-size: 12px; border-radius: 999px; padding: 2px 10px; border: 1px solid transparent; white-space: nowrap; }
+  .s-todo { color: var(--ink-2); background: var(--surface-alt); }
+  .s-doing { color: var(--accent); background: var(--accent-soft); }
+  .s-risk { color: var(--warning); background: var(--warning-soft); }
+  .s-done { color: var(--good); background: var(--good-soft); }
+  .status { font-size: 12px; padding: 3px 8px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .newgoal { display: flex; flex-direction: column; gap: 8px; }
+  .idea { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px dashed var(--border); flex-wrap: wrap; }
+  .idea .tx { flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .idea .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .by { color: var(--ink-3); font-size: 12px; }
+  .suggest { color: var(--accent); }
+  .note-box { color: var(--warning); background: var(--warning-soft); border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+  .foot { text-align: center; color: var(--ink-3); font-size: 12px; }
+  #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 20; max-width: 90vw; }
+  @media (max-width: 720px) {
+    h1 { font-size: 28px; }
+    .goal-top { grid-template-columns: auto 1fr; }
+    .goal-meta { grid-column: 1 / -1; justify-content: flex-start; }
+    .goal-body { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar" id="topbar" hidden>
+    <span class="viewers" id="viewers"></span>
+    <span id="viewerName"></span>
+    <button type="button" class="top-btn" id="refreshBtn">Refresh</button>
+    <button type="button" class="top-btn" id="themeBtn">Theme</button>
+    <button type="button" class="top-btn" id="signOutBtn">Sign out</button>
+  </div>
+
+  <div class="signin" id="signin" hidden>
+    <div class="eyebrow">BQE Support</div>
+    <h1>Support Goals 2027</h1>
+    <p>Sign in with your RingCentral account.</p>
+    <button type="button" class="primary-btn" id="signInBtn">Sign in with RingCentral</button>
+    <p class="tiny"><a href="#" id="zdSignIn">No RingCentral account? Sign in with Zendesk</a> &middot; <a href="#" id="emailToggle">or with email</a></p>
+    <form id="emailForm" hidden>
+      <input type="email" id="emEmail" placeholder="you@bqe.com" autocomplete="username" required>
+      <input type="password" id="emPw" placeholder="Password" autocomplete="current-password" required>
+      <button type="submit" class="primary-btn" id="emBtn">Sign in</button>
+      <p class="tiny"><a href="#" id="emForgot">Forgot password?</a></p>
+    </form>
+    <form id="setPwForm" hidden>
+      <p id="setPwTitle"></p>
+      <input type="password" id="newPw" placeholder="New password (8 or more characters)" autocomplete="new-password" required minlength="8">
+      <input type="password" id="newPw2" placeholder="Type it again" autocomplete="new-password" required minlength="8">
+      <button type="submit" class="primary-btn" id="setPwBtn">Save password and sign in</button>
+    </form>
+    <div class="note" id="signinNote"></div>
+    <div class="msg" id="signinMsg"></div>
+  </div>
+
+  <div id="board" hidden style="display:flex; flex-direction:column; gap:22px;">
+    <header>
+      <div class="eyebrow">BQE Support</div>
+      <h1>Support Goals 2027</h1>
+      <p class="scope">Shared board for the Support leads. Add ideas as they come up, break each goal into subtasks with checkboxes, and log the work as it happens.</p>
+      <span class="tag" id="tag">Loading the board</span>
+    </header>
+    <div id="app"><div class="empty">Loading goals...</div></div>
+  </div>
+  <div class="foot">BQE Software &middot; Internal &middot; Version 1.0</div>
+</div>
+<div id="toast" hidden></div>
+
+<script>
+(function () {
+  var BOARD_FN = "support-goals";
+  var REFRESH_MS = 15 * 60 * 1000, STALE_MS = 5 * 60 * 1000;
+  var S = { goals: [], tasks: [], log: [], ideas: [], people: [], viewer: null, open: {}, allLogs: {}, confirm: null, editing: null, addGoal: false, ready: false, err: "" };
+  var STATUS = [["todo", "Not started", "s-todo"], ["doing", "In progress", "s-doing"], ["risk", "At risk", "s-risk"], ["done", "Done", "s-done"]];
+  var app = document.getElementById("app"), loadedAt = 0, sig = "", refreshTimer = null, started = false;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function today() { var d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function fmtDate(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ""); if (!m) return esc(s || "");
+    return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+  function byTime(a, b) { return String(a.created_at || "").localeCompare(String(b.created_at || "")); }
+  function bySort(a, b) { return (a.sort || 0) - (b.sort || 0) || byTime(a, b); }
+  function byLog(a, b) { return String(b.day || "").localeCompare(String(a.day || "")) || String(b.created_at || "").localeCompare(String(a.created_at || "")); }
+  function nameOf(id) { for (var i = 0; i < S.people.length; i++) if (S.people[i].id === id) return S.people[i].name; return ""; }
+  function who(id) {
+    if (!id) return "Someone";
+    if (S.viewer && S.viewer.agentId === id) return "You";
+    return esc(nameOf(id) || "Someone");
+  }
+  function statusInfo(k) { for (var i = 0; i < STATUS.length; i++) if (STATUS[i][0] === k) return STATUS[i]; return STATUS[0]; }
+  var tt;
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(function () { t.hidden = true; }, 3500); }
+  function canDelete() { return !!S.viewer && (S.viewer.role === "admin" || S.viewer.role === "manager"); }
+
+  // ---- saving: every change is one call, and the board redraws from the answer ----
+  function setData(j) {
+    var next = JSON.stringify([j.goals, j.tasks, j.log, j.ideas, j.people]);
+    S.viewer = j.viewer || S.viewer; S.people = j.people || [];
+    if (next !== sig) { sig = next; S.goals = j.goals || []; S.tasks = j.tasks || []; S.log = j.log || []; S.ideas = j.ideas || []; S.ready = true; render(); }
+    else if (!S.ready) { S.ready = true; render(); }
+  }
+  function load() {
+    return BQEBoard.api(BOARD_FN).then(function (j) { loadedAt = Date.now(); S.err = ""; setData(j); }).catch(function (e) {
+      S.err = e.message; if (!S.ready) { $("tag").textContent = "Could not load (" + e.message + ")"; }
+    });
+  }
+  function act(body, okMsg) {
+    return BQEBoard.api(BOARD_FN, { method: "POST", body: body }).then(function (j) { loadedAt = Date.now(); setData(j); if (okMsg) toast(okMsg); })
+      .catch(function (e) { toast("Could not save: " + e.message); load(); });
+  }
+
+  // ---- drawing ----
+  function goalHtml(g) {
+    var ts = S.tasks.filter(function (t) { return t.goal_id === g.id; }).sort(bySort);
+    var done = ts.filter(function (t) { return t.done; }).length, pct = ts.length ? Math.round(done / ts.length * 100) : 0;
+    var logs = S.log.filter(function (l) { return l.goal_id === g.id; }).sort(byLog);
+    var open = S.open[g.id] !== false, st = statusInfo(g.status), owners = Array.isArray(g.owners) ? g.owners : [];
+    var h = '<article class="goal' + (open ? " open" : "") + '" data-g="' + esc(g.id) + '">';
+    h += '<div class="goal-top" data-act="toggle" data-g="' + esc(g.id) + '"><button class="chev" aria-label="Show or hide details" aria-expanded="' + open + '">&#9656;</button>';
+    h += '<div class="goal-title">' + esc(g.title) + '<div class="sub">' + (owners.length ? "Owner: " + owners.map(who).join(", ") : "No owner yet") + "</div></div><div class=\"goal-meta\">";
+    h += '<select class="chip status ' + st[2] + '" data-act="status" data-g="' + esc(g.id) + '" aria-label="Status">';
+    STATUS.forEach(function (s) { h += '<option value="' + s[0] + '"' + (s[0] === st[0] ? " selected" : "") + ">" + s[1] + "</option>"; });
+    h += '</select><div class="prog"><div class="track"><div class="fill" style="width:' + pct + '%"></div></div><span class="n">' + done + " of " + ts.length + "</span></div></div></div>";
+    if (!open) return h + "</article>";
+    h += '<div class="goal-body">';
+    if (S.editing === g.id) {
+      h += '<form class="f why" data-form="editgoal" data-g="' + esc(g.id) + '"><input type="text" id="et-' + esc(g.id) + '" value="' + esc(g.title) + '" aria-label="Goal title" required maxlength="200">' +
+           '<textarea id="ew-' + esc(g.id) + '" aria-label="Why it matters" maxlength="2000">' + esc(g.why || "") + '</textarea>' +
+           '<button class="btn primary" type="submit">Save</button><button class="btn" type="button" data-act="canceledit">Cancel</button></form>';
+    } else if (g.why) h += '<p class="why">' + esc(g.why) + "</p>";
+    // owners and proposer
+    h += '<div class="people"><div class="people-row"><span class="lbl">Owners</span>';
+    if (!owners.length) h += '<span class="empty">None yet</span>';
+    owners.forEach(function (o) { h += '<span class="pchip">' + who(o) + '<button class="x" data-act="rmowner" data-g="' + esc(g.id) + '" data-id="' + esc(o) + '" aria-label="Remove owner">&times;</button></span>'; });
+    var avail = S.people.filter(function (p) { return owners.indexOf(p.id) < 0; });
+    if (avail.length) {
+      h += '<select data-act="addowner" data-g="' + esc(g.id) + '" aria-label="Add an owner"><option value="">Add an owner</option>';
+      avail.forEach(function (p) { h += '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; });
+      h += "</select>";
+    }
+    h += '</div><div class="people-row"><span class="lbl">Proposed by</span>' + (g.proposed_by ? who(g.proposed_by) : '<span class="empty">Not recorded</span>');
+    if (!g.proposed_by) h += '<button class="btn link" data-act="setproposer" data-g="' + esc(g.id) + '">That was me</button>';
+    h += "</div></div>";
+    // subtasks
+    h += '<div class="col"><h3>Subtasks</h3>';
+    if (!ts.length) h += '<div class="empty">No subtasks yet. Add the first step below.</div>';
+    ts.forEach(function (t) {
+      h += '<div class="task' + (t.done ? " done" : "") + '"><input type="checkbox" data-act="tick" data-id="' + esc(t.id) + '"' + (t.done ? " checked" : "") + ' aria-label="Mark done">' +
+           '<span class="tx">' + esc(t.text) + "</span>" + (t.done && t.done_by ? '<span class="by">' + who(t.done_by) + "</span>" : "") +
+           '<button class="x" data-act="deltask" data-id="' + esc(t.id) + '" aria-label="Remove subtask">&times;</button></div>';
+    });
+    h += '<form class="f" data-form="task" data-g="' + esc(g.id) + '"><input type="text" id="st-' + esc(g.id) + '" placeholder="Add a subtask" aria-label="New subtask" required maxlength="400"><button class="btn" type="submit">Add</button></form></div>';
+    // work log
+    h += '<div class="col"><h3>Work log</h3>';
+    h += '<form class="f" data-form="log" data-g="' + esc(g.id) + '"><input type="date" id="ld-' + esc(g.id) + '" value="' + today() + '" aria-label="Date of work"><textarea id="lt-' + esc(g.id) + '" placeholder="What was done toward this goal" aria-label="Work done" required maxlength="2000"></textarea><button class="btn primary" type="submit">Log work</button></form>';
+    if (!logs.length) h += '<div class="empty">Nothing logged yet.</div>';
+    (S.allLogs[g.id] ? logs : logs.slice(0, 5)).forEach(function (l) {
+      h += '<div class="entry"><div class="when">' + fmtDate(l.day) + " &middot; " + who(l.by_agent) + '</div><div class="tx">' + esc(l.text) + "</div>" +
+           '<button class="x" data-act="dellog" data-id="' + esc(l.id) + '" aria-label="Remove entry">&times;</button></div>';
+    });
+    if (logs.length > 5) h += '<button class="btn link" data-act="alllogs" data-g="' + esc(g.id) + '">' + (S.allLogs[g.id] ? "Show fewer" : "Show all " + logs.length + " entries") + "</button>";
+    h += "</div>";
+    h += '<div class="goal-actions"><button class="btn" data-act="editgoal" data-g="' + esc(g.id) + '">Edit goal</button>';
+    if (canDelete()) {
+      var sure = S.confirm === "goal:" + g.id;
+      h += '<button class="btn danger' + (sure ? " sure" : "") + '" data-act="delgoal" data-g="' + esc(g.id) + '">' + (sure ? "Confirm: delete goal, " + ts.length + " subtasks and " + logs.length + " log entries" : "Delete goal") + "</button>" +
+           (sure ? '<button class="btn" data-act="cancelconfirm">Keep it</button>' : "");
+    }
+    return h + "</div></div></article>";
+  }
+
+  function html() {
+    var goals = S.goals.slice().sort(bySort);
+    var doneT = S.tasks.filter(function (t) { return t.done; }).length, ym = today().slice(0, 7);
+    var month = S.log.filter(function (l) { return String(l.day || "").indexOf(ym) === 0; }).length;
+    var h = '<div class="kpis"><div class="kpi"><div class="v">' + goals.length + '</div><div class="l">Goals</div></div>' +
+      '<div class="kpi"><div class="v">' + doneT + " of " + S.tasks.length + '</div><div class="l">Subtasks done</div></div>' +
+      '<div class="kpi"><div class="v">' + month + '</div><div class="l">Work entries this month</div></div>' +
+      '<div class="kpi"><div class="v">' + S.ideas.length + '</div><div class="l">Ideas waiting</div></div></div>';
+    h += '<section class="stack"><div class="sec-head"><div><h2>Goals</h2><p class="sec-note">Open a goal to tick off subtasks and log work.</p></div>' +
+         '<button class="btn primary" data-act="togglenewgoal">' + (S.addGoal ? "Close" : "Add a goal") + "</button></div>";
+    if (S.addGoal) h += '<form class="f panel newgoal" data-form="goal"><input type="text" id="ng-title" placeholder="Goal title" aria-label="Goal title" required maxlength="200"><textarea id="ng-why" placeholder="Why it matters and what done looks like" aria-label="Why it matters" maxlength="2000"></textarea><div><button class="btn primary" type="submit">Create goal</button></div></form>';
+    if (!goals.length) h += '<div class="panel empty">No goals yet. Use Add a goal to create the first one.</div>';
+    goals.forEach(function (g) { h += goalHtml(g); });
+    h += "</section>";
+
+    h += '<section class="stack"><div><h2>Recent work</h2><p class="sec-note">The latest log entries across all goals.</p></div><div class="panel">';
+    var recent = S.log.slice().sort(byLog).slice(0, 8);
+    if (!recent.length) h += '<div class="empty">Logged work will show up here.</div>';
+    recent.forEach(function (l) {
+      var g = S.goals.filter(function (x) { return x.id === l.goal_id; })[0];
+      h += '<div class="entry"><div class="when">' + fmtDate(l.day) + " &middot; " + who(l.by_agent) + " &middot; " + esc(g ? g.title : "Removed goal") + '</div><div class="tx">' + esc(l.text) + "</div></div>";
+    });
+    h += "</div></section>";
+
+    h += '<section class="stack"><div><h2>Ideas</h2><p class="sec-note">Drop anything worth considering. Turn it into a goal or a subtask when it is ready.</p></div><div class="panel">';
+    h += '<form class="f" data-form="idea"><textarea id="idea-text" placeholder="An idea for 2027" aria-label="Idea" required maxlength="2000"></textarea><select id="idea-goal" aria-label="Related goal"><option value="">Not tied to a goal</option>';
+    goals.forEach(function (g) { h += '<option value="' + esc(g.id) + '">' + esc(g.title) + "</option>"; });
+    h += '</select><button class="btn primary" type="submit">Add idea</button></form>';
+    if (!S.ideas.length) h += '<div class="empty">No ideas yet.</div>';
+    S.ideas.slice().sort(byTime).reverse().forEach(function (i) {
+      var g = S.goals.filter(function (x) { return x.id === i.goal_id; })[0];
+      h += '<div class="idea"><div class="tx">' + esc(i.text) + '<div class="by">' + (i.source === "claude" ? '<span class="suggest">Suggested by Claude</span>' : "Proposed by " + who(i.by_agent)) + (g ? " &middot; for " + esc(g.title) : "") + "</div></div>" +
+           '<div class="acts">' + (g ? '<button class="btn" data-act="idea2task" data-id="' + esc(i.id) + '">Add as subtask</button>' : "") +
+           '<button class="btn" data-act="idea2goal" data-id="' + esc(i.id) + '">Make it a goal</button><button class="btn" data-act="delidea" data-id="' + esc(i.id) + '">Remove</button></div></div>';
+    });
+    return h + "</div></section>";
+  }
+
+  function render() {
+    var saved = {};
+    app.querySelectorAll("input[id],textarea[id],select[id]").forEach(function (i) { saved[i.id] = i.value; });
+    var ae = document.activeElement, aid = ae && ae.id, ss = ae && ae.selectionStart, se = ae && ae.selectionEnd;
+    app.innerHTML = html();
+    Object.keys(saved).forEach(function (id) { var e = $(id); if (e && saved[id] !== "") e.value = saved[id]; });
+    if (aid) { var f = $(aid); if (f) { f.focus(); try { if (ss != null) f.setSelectionRange(ss, se); } catch (x) {} } }
+    $("tag").textContent = "Shared by the team. Saves as you go.";
+  }
+
+  // ---- events ----
+  app.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-act]"); if (!t) return;
+    var a = t.dataset.act, g = t.dataset.g, id = t.dataset.id;
+    if (a === "status" || a === "tick" || a === "addowner") return; // handled on change
+    if (a === "toggle") { if (e.target.closest("select,button.x,input")) return; S.open[g] = S.open[g] === false; render(); return; }
+    if (a === "togglenewgoal") { S.addGoal = !S.addGoal; render(); return; }
+    if (a === "editgoal") { S.editing = g; render(); return; }
+    if (a === "canceledit") { S.editing = null; render(); return; }
+    if (a === "alllogs") { S.allLogs[g] = !S.allLogs[g]; render(); return; }
+    if (a === "cancelconfirm") { S.confirm = null; render(); return; }
+    if (a === "delgoal") {
+      if (S.confirm !== "goal:" + g) { S.confirm = "goal:" + g; render(); return; }
+      S.confirm = null; act({ action: "goal_delete", id: g }, "Goal deleted"); return;
+    }
+    if (a === "rmowner") {
+      var go = S.goals.filter(function (x) { return x.id === g; })[0]; if (!go) return;
+      act({ action: "goal_update", id: g, owners: (go.owners || []).filter(function (x) { return x !== id; }) }); return;
+    }
+    if (a === "setproposer") { act({ action: "goal_update", id: g, proposed_by: S.viewer && S.viewer.agentId }); return; }
+    if (a === "deltask") act({ action: "task_delete", id: id });
+    if (a === "dellog") act({ action: "log_delete", id: id });
+    if (a === "delidea") act({ action: "idea_delete", id: id });
+    if (a === "idea2goal") act({ action: "idea_promote", id: id, as: "goal" }, "Idea is now a goal");
+    if (a === "idea2task") act({ action: "idea_promote", id: id, as: "task" }, "Idea is now a subtask");
+  });
+  app.addEventListener("change", function (e) {
+    var t = e.target, a = t.dataset && t.dataset.act;
+    if (a === "tick") {
+      var task = S.tasks.filter(function (x) { return x.id === t.dataset.id; })[0];
+      if (task) { task.done = t.checked; task.done_by = t.checked && S.viewer ? S.viewer.agentId : null; render(); }
+      act({ action: "task_toggle", id: t.dataset.id, done: t.checked });
+    }
+    if (a === "status") act({ action: "goal_update", id: t.dataset.g, status: t.value });
+    if (a === "addowner" && t.value) {
+      var go = S.goals.filter(function (x) { return x.id === t.dataset.g; })[0]; if (!go) return;
+      act({ action: "goal_update", id: t.dataset.g, owners: (go.owners || []).concat([t.value]) });
+    }
+  });
+  app.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = e.target, k = f.dataset.form, g = f.dataset.g;
+    function val(id) { return ($(id).value || "").trim(); }
+    if (k === "task") { var tx = val("st-" + g); if (tx) { $("st-" + g).value = ""; act({ action: "task_add", goal_id: g, text: tx }); } }
+    if (k === "log") { var lt = val("lt-" + g); if (lt) { var d = val("ld-" + g) || today(); $("lt-" + g).value = ""; act({ action: "log_add", goal_id: g, day: d, text: lt }, "Work logged"); } }
+    if (k === "idea") { var it = val("idea-text"); if (it) { var gid = $("idea-goal").value || null; $("idea-text").value = ""; act({ action: "idea_add", text: it, goal_id: gid }, "Idea added"); } }
+    if (k === "goal") { var gt = val("ng-title"); if (gt) { var gw = val("ng-why"); $("ng-title").value = ""; $("ng-why").value = ""; S.addGoal = false; act({ action: "goal_add", title: gt, why: gw }, "Goal created"); } }
+    if (k === "editgoal") { var et = val("et-" + g); if (et) { S.editing = null; act({ action: "goal_update", id: g, title: et, why: val("ew-" + g) }); } }
+  });
+
+  // ---- header, theme, sign-in (same options as the other boards) ----
+  function renderViewers(people) {
+    $("viewers").innerHTML = people.map(function (p) { return '<span class="viewer-dot' + (p.me ? " me" : "") + '" title="' + esc(p.name + (p.me ? " (you)" : "")) + '">' + esc(p.initials) + "</span>"; }).join("");
+  }
+  function applyTheme(t) { if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); }
+  try { applyTheme(localStorage.getItem("bqeBoards.theme")); } catch (e) {}
+  $("themeBtn").addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    var t = cur === "dark" ? "light" : "dark"; applyTheme(t); try { localStorage.setItem("bqeBoards.theme", t); } catch (e) {}
+  });
+  $("refreshBtn").addEventListener("click", function () { load().then(function () { toast("Up to date"); }); });
+  function showSignin(msg) { $("board").hidden = true; $("topbar").hidden = true; $("signin").hidden = false; $("signinMsg").textContent = msg || ""; }
+  function signinNote(t) { $("signinNote").textContent = t || ""; $("signinMsg").textContent = ""; }
+  $("signInBtn").addEventListener("click", function () { $("signinMsg").textContent = ""; BQEBoard.signIn().catch(function (e) { showSignin(e.message); }); });
+  $("zdSignIn").addEventListener("click", function (e) { e.preventDefault(); BQEBoard.signIn("zendesk").catch(function (x) { showSignin(x.message); }); });
+  $("emailToggle").addEventListener("click", function (e) { e.preventDefault(); $("emailForm").hidden = !$("emailForm").hidden; if (!$("emailForm").hidden) $("emEmail").focus(); });
+  $("emailForm").addEventListener("submit", function (e) {
+    e.preventDefault(); signinNote(""); $("emBtn").disabled = true;
+    BQEBoard.emailSignIn($("emEmail").value.trim().toLowerCase(), $("emPw").value)
+      .catch(function (x) { showSignin(x.message); }).finally(function () { $("emBtn").disabled = false; $("emPw").value = ""; });
+  });
+  $("emForgot").addEventListener("click", function (e) {
+    e.preventDefault();
+    var email = $("emEmail").value.trim().toLowerCase();
+    if (!/@/.test(email)) { showSignin("Type your email address first, then click Forgot password."); return; }
+    BQEBoard.emailReset(email).then(function () { signinNote("If that address has an account, a reset link is on its way. It works once, within an hour."); })
+      .catch(function (x) { showSignin("Couldn't send the email: " + x.message); });
+  });
+  $("setPwForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if ($("newPw").value !== $("newPw2").value) { showSignin("The two passwords don't match."); return; }
+    signinNote(""); $("setPwBtn").disabled = true;
+    BQEBoard.setPassword($("newPw").value)
+      .then(function () { $("setPwForm").hidden = true; })
+      .catch(function (x) { showSignin(x.message); }).finally(function () { $("setPwBtn").disabled = false; $("newPw").value = $("newPw2").value = ""; });
+  });
+  $("signOutBtn").addEventListener("click", function () { BQEBoard.signOut(); });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && started && Date.now() - loadedAt > STALE_MS) load(); });
+
+  BQEBoard.start({
+    board: "support-goals",
+    onSignIn: showSignin,
+    onSetPassword: function (p) {
+      $("board").hidden = true; $("signin").hidden = false; $("emailForm").hidden = true; $("setPwForm").hidden = false;
+      $("setPwTitle").textContent = (p.type === "invite" ? "Welcome. Choose a password" : "Choose a new password") + (p.email ? " for " + p.email : "") + ".";
+      $("newPw").focus();
+    },
+    onReady: function (v) {
+      started = true; $("signin").hidden = true; $("board").hidden = false; $("topbar").hidden = false;
+      $("viewerName").textContent = v.name;
+      BQEBoard.presence(renderViewers);
+      load();
+      if (!refreshTimer) refreshTimer = setInterval(function () { if (!document.hidden) load(); }, REFRESH_MS);
+    }
+  });
+})();
+</script>
+</body>
+</html>
