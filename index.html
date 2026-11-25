@@ -64,6 +64,12 @@
   .kpi .l { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
   .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .sec-note { color: var(--ink-2); font-size: 13px; margin: 2px 0 0; }
+  .tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .tab { font: inherit; font-size: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 6px 16px; cursor: pointer; }
+  .tab:hover { border-color: var(--accent); }
+  .tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab .cnt { opacity: .8; font-variant-numeric: tabular-nums; margin-left: 4px; }
+  .arr { color: var(--ink-3); }
   .stack { display: flex; flex-direction: column; gap: 14px; }
   .goal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
   .goal-top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 14px 16px; cursor: pointer; }
@@ -173,7 +179,7 @@
     </header>
     <div id="app"><div class="empty">Loading goals...</div></div>
   </div>
-  <div class="foot">BQE Software &middot; Internal &middot; Version 1.1</div>
+  <div class="foot">BQE Software &middot; Internal &middot; Version 1.2</div>
 </div>
 <div id="toast" hidden></div>
 
@@ -181,7 +187,8 @@
 (function () {
   var BOARD_FN = "support-goals";
   var REFRESH_MS = 15 * 60 * 1000, STALE_MS = 5 * 60 * 1000;
-  var S = { goals: [], tasks: [], log: [], ideas: [], people: [], viewer: null, open: {}, allLogs: {}, confirm: null, editing: null, addGoal: false, ready: false, err: "" };
+  var TABS = ["ideas", "goals", "rocks"];
+  var S = { tab: (TABS.indexOf((location.hash || "").slice(1)) >= 0 ? (location.hash || "").slice(1) : "goals"), goals: [], tasks: [], log: [], ideas: [], people: [], viewer: null, open: {}, allLogs: {}, confirm: null, editing: null, addGoal: false, ready: false, err: "" };
   var STATUS = [["todo", "Not started", "s-todo"], ["doing", "In progress", "s-doing"], ["risk", "At risk", "s-risk"], ["done", "Done", "s-done"]];
   var app = document.getElementById("app"), loadedAt = 0, sig = "", refreshTimer = null, started = false;
 
@@ -225,14 +232,16 @@
   }
 
   // ---- drawing ----
+  // Goals start open; completed goals (the Rocks tab) start closed.
+  function isOpen(g) { return g.status === "done" ? S.open[g.id] === true : S.open[g.id] !== false; }
   function goalHtml(g) {
     var ts = S.tasks.filter(function (t) { return t.goal_id === g.id; }).sort(bySort);
     var done = ts.filter(function (t) { return t.done; }).length, pct = ts.length ? Math.round(done / ts.length * 100) : 0;
     var logs = S.log.filter(function (l) { return l.goal_id === g.id; }).sort(byLog);
-    var open = S.open[g.id] !== false, st = statusInfo(g.status), owners = Array.isArray(g.owners) ? g.owners : [];
+    var open = isOpen(g), st = statusInfo(g.status), owners = Array.isArray(g.owners) ? g.owners : [];
     var h = '<article class="goal' + (open ? " open" : "") + '" data-g="' + esc(g.id) + '">';
     h += '<div class="goal-top" data-act="toggle" data-g="' + esc(g.id) + '"><button class="chev" aria-label="Show or hide details" aria-expanded="' + open + '">&#9656;</button>';
-    h += '<div class="goal-title">' + esc(g.title) + '<div class="sub">' + (owners.length ? "Owner: " + owners.map(who).join(", ") : "No owner yet") + "</div></div><div class=\"goal-meta\">";
+    h += '<div class="goal-title">' + esc(g.title) + '<div class="sub">' + (g.status === "done" && g.done_at ? "Completed " + fmtDate(g.done_at) + " &middot; " : "") + (owners.length ? "Owner: " + owners.map(who).join(", ") : "No owner yet") + "</div></div><div class=\"goal-meta\">";
     h += '<select class="chip status ' + st[2] + '" data-act="status" data-g="' + esc(g.id) + '" aria-label="Status">';
     STATUS.forEach(function (s) { h += '<option value="' + s[0] + '"' + (s[0] === st[0] ? " selected" : "") + ">" + s[1] + "</option>"; });
     h += '</select><div class="prog"><div class="track"><div class="fill" style="width:' + pct + '%"></div></div><span class="n">' + done + " of " + ts.length + "</span></div></div></div>";
@@ -290,17 +299,25 @@
   }
 
   function html() {
-    var goals = S.goals.slice().sort(bySort);
+    var all = S.goals.slice().sort(bySort);
+    var goals = all.filter(function (g) { return g.status !== "done"; });
+    var rocks = all.filter(function (g) { return g.status === "done"; }).sort(function (a, b) { return String(b.done_at || "").localeCompare(String(a.done_at || "")); });
     var doneT = S.tasks.filter(function (t) { return t.done; }).length, ym = today().slice(0, 7);
     var month = S.log.filter(function (l) { return String(l.day || "").indexOf(ym) === 0; }).length;
-    var h = '<div class="kpis"><div class="kpi"><div class="v">' + goals.length + '</div><div class="l">Goals</div></div>' +
+    var h = '<div class="kpis"><div class="kpi"><div class="v">' + goals.length + '</div><div class="l">Active goals</div></div>' +
+      '<div class="kpi"><div class="v">' + rocks.length + '</div><div class="l">Rocks (goals done)</div></div>' +
       '<div class="kpi"><div class="v">' + doneT + " of " + S.tasks.length + '</div><div class="l">Subtasks done</div></div>' +
       '<div class="kpi"><div class="v">' + month + '</div><div class="l">Work entries this month</div></div>' +
       '<div class="kpi"><div class="v">' + S.ideas.length + '</div><div class="l">Ideas waiting</div></div></div>';
-    h += '<section class="stack"><div class="sec-head"><div><h2>Goals</h2><p class="sec-note">Open a goal to tick off subtasks and log work.</p></div>' +
+    h += '<div class="tabs" role="tablist" aria-label="Board sections">' +
+      '<button class="tab' + (S.tab === "ideas" ? " on" : "") + '" role="tab" aria-selected="' + (S.tab === "ideas") + '" data-act="tab" data-tab="ideas">Ideas <span class="cnt">' + S.ideas.length + '</span></button><span class="arr" aria-hidden="true">&rsaquo;</span>' +
+      '<button class="tab' + (S.tab === "goals" ? " on" : "") + '" role="tab" aria-selected="' + (S.tab === "goals") + '" data-act="tab" data-tab="goals">Goals <span class="cnt">' + goals.length + '</span></button><span class="arr" aria-hidden="true">&rsaquo;</span>' +
+      '<button class="tab' + (S.tab === "rocks" ? " on" : "") + '" role="tab" aria-selected="' + (S.tab === "rocks") + '" data-act="tab" data-tab="rocks">Rocks <span class="cnt">' + rocks.length + '</span></button></div>';
+    if (S.tab === "goals") {
+    h += '<section class="stack"><div class="sec-head"><div><h2>Goals</h2><p class="sec-note">Open a goal to tick off subtasks and log work. Mark a goal Done and it moves to Rocks.</p></div>' +
          '<button class="btn primary" data-act="togglenewgoal">' + (S.addGoal ? "Close" : "Add a goal") + "</button></div>";
     if (S.addGoal) h += '<form class="f panel newgoal" data-form="goal"><input type="text" id="ng-title" placeholder="Goal title" aria-label="Goal title" required maxlength="200"><textarea id="ng-why" placeholder="Why it matters and what done looks like" aria-label="Why it matters" maxlength="2000"></textarea><div><button class="btn primary" type="submit">Create goal</button></div></form>';
-    if (!goals.length) h += '<div class="panel empty">No goals yet. Use Add a goal to create the first one.</div>';
+    if (!goals.length) h += '<div class="panel empty">No active goals. Use Add a goal, or make one from an idea.</div>';
     goals.forEach(function (g) { h += goalHtml(g); });
     h += "</section>";
 
@@ -313,6 +330,8 @@
     });
     h += "</div></section>";
 
+    }
+    if (S.tab === "ideas") {
     h += '<section class="stack"><div><h2>Ideas</h2><p class="sec-note">Drop anything worth considering. Turn it into a goal or a subtask when it is ready.</p></div><div class="panel">';
     h += '<form class="f" data-form="idea"><textarea id="idea-text" placeholder="An idea for 2027" aria-label="Idea" required maxlength="2000"></textarea><select id="idea-goal" aria-label="Related goal"><option value="">Not tied to a goal</option>';
     goals.forEach(function (g) { h += '<option value="' + esc(g.id) + '">' + esc(g.title) + "</option>"; });
@@ -324,7 +343,15 @@
            '<div class="acts">' + (g ? '<button class="btn" data-act="idea2task" data-id="' + esc(i.id) + '">Add as subtask</button>' : "") +
            '<button class="btn" data-act="idea2goal" data-id="' + esc(i.id) + '">Make it a goal</button><button class="btn" data-act="delidea" data-id="' + esc(i.id) + '">Remove</button></div></div>';
     });
-    return h + "</div></section>";
+    h += "</div></section>";
+    }
+    if (S.tab === "rocks") {
+      h += '<section class="stack"><div><h2>Rocks</h2><p class="sec-note">Goals that are done land here. Set a goal back to another status to return it to Goals.</p></div>';
+      if (!rocks.length) h += '<div class="panel empty">No rocks yet. When a goal is marked Done it moves here.</div>';
+      rocks.forEach(function (g) { h += goalHtml(g); });
+      h += "</section>";
+    }
+    return h;
   }
 
   function render() {
@@ -342,7 +369,11 @@
     var t = e.target.closest("[data-act]"); if (!t) return;
     var a = t.dataset.act, g = t.dataset.g, id = t.dataset.id;
     if (a === "status" || a === "tick" || a === "addowner" || a === "setproposerto") return; // handled on change
-    if (a === "toggle") { if (e.target.closest("select,button.x,input")) return; S.open[g] = S.open[g] === false; render(); return; }
+    if (a === "tab") { S.tab = t.dataset.tab; try { history.replaceState(null, "", "#" + S.tab); } catch (x) {} render(); return; }
+    if (a === "toggle") {
+      if (e.target.closest("select,button.x,input")) return;
+      var gg = S.goals.filter(function (x) { return x.id === g; })[0]; if (gg) S.open[g] = !isOpen(gg); render(); return;
+    }
     if (a === "togglenewgoal") { S.addGoal = !S.addGoal; render(); return; }
     if (a === "editgoal") { S.editing = g; render(); return; }
     if (a === "canceledit") { S.editing = null; render(); return; }
@@ -360,7 +391,7 @@
     if (a === "deltask") act({ action: "task_delete", id: id });
     if (a === "dellog") act({ action: "log_delete", id: id });
     if (a === "delidea") act({ action: "idea_delete", id: id });
-    if (a === "idea2goal") act({ action: "idea_promote", id: id, as: "goal" }, "Idea is now a goal");
+    if (a === "idea2goal") act({ action: "idea_promote", id: id, as: "goal" }, "Idea is now a goal. See the Goals tab.");
     if (a === "idea2task") act({ action: "idea_promote", id: id, as: "task" }, "Idea is now a subtask");
   });
   app.addEventListener("change", function (e) {
@@ -370,7 +401,7 @@
       if (task) { task.done = t.checked; task.done_by = t.checked && S.viewer ? S.viewer.agentId : null; render(); }
       act({ action: "task_toggle", id: t.dataset.id, done: t.checked });
     }
-    if (a === "status") act({ action: "goal_update", id: t.dataset.g, status: t.value });
+    if (a === "status") act({ action: "goal_update", id: t.dataset.g, status: t.value }, t.value === "done" ? "Moved to Rocks" : (S.tab === "rocks" ? "Back on the Goals tab" : null));
     if (a === "setproposerto" && t.value) act({ action: "goal_update", id: t.dataset.g, proposed_by: t.value === "__none" ? null : t.value }, "Proposer changed");
     if (a === "addowner" && t.value) {
       var go = S.goals.filter(function (x) { return x.id === t.dataset.g; })[0]; if (!go) return;
