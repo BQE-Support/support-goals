@@ -195,7 +195,7 @@
     </header>
     <div id="app"><div class="empty">Loading goals...</div></div>
   </div>
-  <div class="foot">BQE Software &middot; Internal &middot; Version 1.5</div>
+  <div class="foot">BQE Software &middot; Internal &middot; Version 1.6</div>
 </div>
 <div id="toast" hidden></div>
 
@@ -393,7 +393,9 @@
     openI.forEach(function (i) {
       var g = S.goals.filter(function (x) { return x.id === i.goal_id; })[0];
       h += '<div class="idea"><div class="tx">' + esc(i.text) + ideaBy(i) + "</div>" +
-           '<div class="acts">' + (g ? '<button class="btn" data-act="idea2task" data-id="' + esc(i.id) + '">Add as subtask</button>' : "") +
+           '<div class="acts">' + (g || S.pickIdea !== i.id ? '<button class="btn" data-act="idea2task" data-id="' + esc(i.id) + '">Add as subtask</button>' :
+             '<select data-act="idea2taskto" data-id="' + esc(i.id) + '" aria-label="Goal for the subtask"><option value="">Add to which goal?</option>' +
+             goals.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.title) + "</option>"; }).join("") + "</select>") +
            '<button class="btn" data-act="idea2goal" data-id="' + esc(i.id) + '">Make it a goal</button>' +
            '<button class="btn" data-act="postponeidea" data-id="' + esc(i.id) + '">Postpone</button>' +
            '<button class="btn danger" data-act="rejectidea" data-id="' + esc(i.id) + '">Reject</button></div></div>';
@@ -478,7 +480,11 @@
     if (a === "postponeidea") act({ action: "idea_postpone", id: id }, "Postponed for a month");
     if (a === "restoreidea") act({ action: "idea_restore", id: id }, "Back in Ideas");
     if (a === "idea2goal") act({ action: "idea_promote", id: id, as: "goal" }, "Idea is now a goal. See the Goals tab.");
-    if (a === "idea2task") act({ action: "idea_promote", id: id, as: "task" }, "Idea is now a subtask");
+    if (a === "idea2task") {
+      var ide = S.ideas.filter(function (x) { return x.id === id; })[0];
+      if (ide && !ide.goal_id) { S.pickIdea = id; render(); return; }
+      act({ action: "idea_promote", id: id, as: "task" }, "Idea is now a subtask");
+    }
   });
   app.addEventListener("change", function (e) {
     var t = e.target, a = t.dataset && t.dataset.act;
@@ -488,6 +494,7 @@
       act({ action: "task_toggle", id: t.dataset.id, done: t.checked });
     }
     if (a === "status") act({ action: "goal_update", id: t.dataset.g, status: t.value }, t.value === "done" ? "Moved to Rocks" : (S.tab === "rocks" ? "Back on the Goals tab" : null));
+    if (a === "idea2taskto" && t.value) { S.pickIdea = null; act({ action: "idea_promote", id: t.dataset.id, as: "task", goal_id: t.value }, "Idea is now a subtask"); }
     if (a === "setproposerto" && t.value) act({ action: "goal_update", id: t.dataset.g, proposed_by: t.value === "__none" ? null : t.value }, "Proposer changed");
     if (a === "addowner" && t.value) {
       var go = S.goals.filter(function (x) { return x.id === t.dataset.g; })[0]; if (!go) return;
